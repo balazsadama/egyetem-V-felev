@@ -1,0 +1,32 @@
+
+2
+23.4
+
+-420
+-6.9
+
+"just some string"
+
+_x = 42
+ayy_ = -2.31
+y = "this is a string"
+
+2 + 4
+0.4 * 2.1 - 1
+7 - 12.1
+9.11 / 6
+
+2 == 4
+2 + 3 == 5 + 1
+
+given 2 == 2 then
+  _x = 2
+otherwise
+  _x = 1
+given _x == -1 then
+  4
+given 2 == _y then
+  x = 0
+
+while x == y do
+  x = x + 1
