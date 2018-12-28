@@ -4,7 +4,8 @@
 #include <stdio.h>
 using namespace std;
 
-int columnCount = 1;
+//int columnCount = 1;
+int poz[] = {1, 1, 0};
 %}
 %option noyywrap
 %option yylineno
@@ -12,43 +13,48 @@ int columnCount = 1;
 %%
 
 
-[+-]?[0-9]+ { //cout << "INTEGER LITERAL " << yytext << "\n";
+[+-]?[0-9]+ { poz[1] += yyleng;  poz[2] = yyleng;
         yylval.num_integer = atoi(yytext); return INTEGER; }
-[+-]?[0-9]+("."[0-9]+)+ { //cout << "REAL LITERAL " << yytext << "\n";
+[+-]?[0-9]+("."[0-9]+)+ { poz[1] += yyleng;  poz[2] = yyleng;
         yylval.num_real = atof(yytext); return REAL; }
-\"(\\\"|[^"])*\" { //cout << "STRING LITERAL " << yytext << "\n";
+\"(\\\"|[^"])*\" { poz[1] += yyleng;  poz[2] = yyleng;
         yylval.text_string = yytext; return STRING; }
 
-"===" { return EQUALS_REFERENCE; }
-"==" { return EQUALS_VALUE; }
+[\(\)\[\],] { poz[1] += yyleng;  poz[2] = yyleng; return yytext[0]; }
 
-[+\-*/] { //cout << "arithmetic operator " << yytext << "\n";
-        return yytext[0]; }
+"===" { poz[1] += yyleng;  poz[2] = yyleng; return EQUALS_REFERENCE; }
+"==" { poz[1] += yyleng;  poz[2] = yyleng; return EQUALS_VALUE; }
+"<" { poz[1] += yyleng;  poz[2] = yyleng; return LESS_THAN; }
+"<=" { poz[1] += yyleng;  poz[2] = yyleng; return LESS_THAN_OR_EQUAL_TO; }
+">" { poz[1] += yyleng;  poz[2] = yyleng; return GREATER_THAN; }
+">=" { poz[1] += yyleng;  poz[2] = yyleng; return GREATER_THAN_OR_EQUAL_TO; }
+"!" { poz[1] += yyleng;  poz[2] = yyleng; return NOT; }
+" not " { poz[1] += yyleng;  poz[2] = yyleng; return NOT; }
 
-"given " { //cout << "beginning of conditional" << "\n";
-        return GIVEN; }
-" then" { //cout << "end of conditional" << "\n";
-        return THEN; }
-"otherwise" { //cout << "beginning of else" << "\n";
-        return OTHERWISE; }
+" and " { poz[1] += yyleng;  poz[2] = yyleng; return AND; }
+" or " { poz[1] += yyleng;  poz[2] = yyleng; return OR; }
 
-"while " { //cout << "beginning of while" << "\n";
-        return WHILE; }
-" do" { //cout << "end of while" << "\n";
-        return DO; }
+[+\-*/] { poz[1] += yyleng;  poz[2] = yyleng; return yytext[0]; }
 
+"given " { poz[1] += yyleng;  poz[2] = yyleng; return GIVEN; }
+" then" { poz[1] += yyleng;  poz[2] = yyleng; return THEN; }
+"otherwise" { poz[1] += yyleng;  poz[2] = yyleng; return OTHERWISE; }
+"endcond" { poz[1] += yyleng;  poz[2] = yyleng; return ENDCOND; }
 
-"integer" { //cout << "TYPE " << yytext << "\n";
-        return TYPE_INTEGER; }
-"real" { //cout << "TYPE " << yytext << "\n";
-        return TYPE_REAL; }
-([_a-zA-Z]+[_a-zA-Z0-9]*) { //cout << "variable " << yytext << "\n";
-        return VARIABLE; }
-"=" { return yytext[0]; }
+"while " { poz[1] += yyleng;  poz[2] = yyleng; return WHILE; }
+" do" { poz[1] += yyleng;  poz[2] = yyleng; return DO; }
+"endwhile" { poz[1] += yyleng;  poz[2] = yyleng; return ENDWHILE; }
 
+"integer" { poz[1] += yyleng;  poz[2] = yyleng; return TYPE_INTEGER; }
+"real" { poz[1] += yyleng;  poz[2] = yyleng; return TYPE_REAL; }
+"string" { poz[1] += yyleng;  poz[2] = yyleng; return TYPE_REAL; }
+([_a-zA-Z]+[_a-zA-Z0-9]*) { poz[1] += yyleng;  poz[2] = yyleng; return VARIABLE; }
+"=" { poz[1] += yyleng;  poz[2] = yyleng; return yytext[0]; }
 
+"read " { poz[1] += yyleng;  poz[2] = yyleng; return READ; }
+"print " { poz[1] += yyleng;  poz[2] = yyleng; return PRINT; }
 
-[ \t\r]+ { columnCount++; }
-\n	{ columnCount = 1; return NEWLINE; }
+[ \t\r]+ { poz[1]+=yyleng; poz[2] = yyleng; }
+\n	{ poz[1] = 1; poz[0]++; poz[2] = 1; }
 
 %%

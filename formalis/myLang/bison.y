@@ -6,6 +6,8 @@ int yyerror(const char*);
 extern int yylex();
 
 int nrBegunConditionals = 0;
+//extern int columnCount;
+extern int poz[];
 %}
 %error-verbose
 
@@ -15,10 +17,14 @@ int nrBegunConditionals = 0;
   char* text_string;
 }
 
+
+%nonassoc EQUALS_VALUE EQUALS_REFERENCE
+%nonassoc LESS_THAN LESS_THAN_OR_EQUAL_TO
+%nonassoc GREATER_THAN GREATER_THAN_OR_EQUAL_TO
+%right NOT
+%left AND OR
 %left '+' '-'
 %left '*' '/'
-%nonassoc EQUALS_VALUE
-%nonassoc EQUALS_REFERENCE
 
 %token<num_integer> INTEGER
 %token<num_real> REAL
@@ -29,9 +35,17 @@ int nrBegunConditionals = 0;
 %type<num_real> expression_real
 %type<text_string> expression_string
 
-%token TYPE_REAL TYPE_INTEGER TYPE_STRING VARIABLE EQUALS_VALUE EQUALS_REFERENCE
+%token TYPE_REAL TYPE_INTEGER TYPE_STRING VARIABLE
 %token GIVEN THEN OTHERWISE
 %token WHILE DO
+
+%token EQUALS_VALUE EQUALS_REFERENCE
+%token LESS_THAN LESS_THAN_OR_EQUAL_TO
+%token GREATER_THAN GREATER_THAN_OR_EQUAL_TO
+%token NOT
+%token PRINT READ
+
+%token ENDCOND ENDWHILE
 
 %%
 
@@ -39,39 +53,86 @@ program :
         | program expression
         | program assignment
         | program conditional
+        | program while
+        | program print
         | program NEWLINE
+        | program declaration
+        | program input
 ;
 
+declaration: TYPE_INTEGER assignment
+           | TYPE_REAL assignment
+           | TYPE_STRING assignment
+           | TYPE_INTEGER VARIABLE
+           | TYPE_REAL VARIABLE
+           | TYPE_STRING VARIABLE
+;
+
+input: READ VARIABLE
+;
 
 expression: expression_integer
           | expression_real
           | expression_string
           | VARIABLE
-          | expression '+' expression { /*cout << "BISON arithmetic expression +\n";*/ }
-          | expression '-' expression { /*cout << "BISON arithmetic expression -\n";*/ }
-          | expression '*' expression { /*cout << "BISON arithmetic expression *\n";*/ }
-          | expression '/' expression { /*cout << "BISON arithmetic expression /\n";*/ }
-          | condition { /*cout << "BISON EQUALITY\n";*/ }
-          | while
+          | '(' expression ')'
+          | '(' expression error ')' { yyerrok; }
+          | expression '+' expression {}
+          | expression '-' expression {}
+          | expression '*' expression {}
+          | expression '/' expression {}
+          | condition {}
+          | VARIABLE '[' expression ']'
+          | VARIABLE '[' expression error ']' { yyerrok; }
 ;
 
 expression_integer: INTEGER { /*$$ = $1; cout << $1 << endl;*/ };
 expression_real: REAL { /*$$ = $1; cout << $1 << endl;*/ };
 expression_string: STRING { /*$$ = $1; cout << $1 << endl;*/ };
 
-assignment: VARIABLE '=' expression { /*cout << "BISON assignment\n";*/ }
+assignment: VARIABLE '=' expression
+          | VARIABLE '=' error expression { yyerrok; }
 ;
 
 
-conditional: GIVEN condition THEN { //cout << "BISON conditional if\n"; 
-                                      nrBegunConditionals++; }
-           | OTHERWISE { if (nrBegunConditionals) { //cout << "BISON conditional else\n"; 
-                                      nrBegunConditionals--;} else yyerror("syntax error"); }
+conditional: GIVEN longer_condition THEN program ENDCOND {}
+          
+           | GIVEN longer_condition THEN program OTHERWISE program ENDCOND {}
+          
 ;
 
-while: WHILE condition DO { /*cout << "BISON WHILE\n";*/ }
+while: WHILE longer_condition DO program ENDWHILE
+     
+;
 
 condition: expression EQUALS_VALUE expression
+         | expression EQUALS_REFERENCE expression
+         | expression LESS_THAN expression
+         | expression LESS_THAN_OR_EQUAL_TO expression
+         | expression GREATER_THAN expression
+         | expression GREATER_THAN_OR_EQUAL_TO expression
+         
+         | expression NOT EQUALS_VALUE expression
+         | expression NOT EQUALS_REFERENCE expression
+         | expression NOT LESS_THAN expression
+         | expression NOT LESS_THAN_OR_EQUAL_TO expression
+         | expression NOT GREATER_THAN expression
+         | expression NOT GREATER_THAN_OR_EQUAL_TO expression
+;
+
+
+
+longer_condition: longer_condition AND longer_condition
+                | longer_condition OR longer_condition
+                | condition 
+                | condition error { yyerrok; }
+;
+
+print: PRINT longer_expression
+;
+
+longer_expression: expression
+                 | longer_expression ',' expression { yyerrok; }
 ;
 
 %%
@@ -81,5 +142,7 @@ int main() {
 }
 
 int yyerror(const char* s) {
+	//cout << "(" << yylineno << ", " << columnCount << ") " << s << endl;
+  cout << "(" << poz[0] << ", " << poz[1]-poz[2] << "): ";
 	cout << s << endl;
 }
