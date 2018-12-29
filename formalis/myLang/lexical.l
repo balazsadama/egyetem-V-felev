@@ -14,11 +14,11 @@ int poz[] = {1, 1, 0};
 
 
 [+-]?[0-9]+ { poz[1] += yyleng;  poz[2] = yyleng;
-        yylval.num_integer = atoi(yytext); return INTEGER; }
+        return INTEGER; }
 [+-]?[0-9]+("."[0-9]+)+ { poz[1] += yyleng;  poz[2] = yyleng;
-        yylval.num_real = atof(yytext); return REAL; }
+        return REAL; }
 \"(\\\"|[^"])*\" { poz[1] += yyleng;  poz[2] = yyleng;
-        yylval.text_string = yytext; return STRING; }
+        return STRING; }
 
 [\(\)\[\],] { poz[1] += yyleng;  poz[2] = yyleng; return yytext[0]; }
 
@@ -47,8 +47,8 @@ int poz[] = {1, 1, 0};
 
 "integer" { poz[1] += yyleng;  poz[2] = yyleng; return TYPE_INTEGER; }
 "real" { poz[1] += yyleng;  poz[2] = yyleng; return TYPE_REAL; }
-"string" { poz[1] += yyleng;  poz[2] = yyleng; return TYPE_REAL; }
-([_a-zA-Z]+[_a-zA-Z0-9]*) { poz[1] += yyleng;  poz[2] = yyleng; return VARIABLE; }
+"string" { poz[1] += yyleng;  poz[2] = yyleng; return TYPE_STRING; }
+([_a-zA-Z]+[_a-zA-Z0-9]*) { poz[1] += yyleng;  poz[2] = yyleng; yylval.varName = strdup(yytext); return VARIABLE; }
 "=" { poz[1] += yyleng;  poz[2] = yyleng; return yytext[0]; }
 
 "read " { poz[1] += yyleng;  poz[2] = yyleng; return READ; }

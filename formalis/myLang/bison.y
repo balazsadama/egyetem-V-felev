@@ -1,20 +1,30 @@
 %{
 #include <iostream>
+#include <cstring>
+#include <string>
+#include <map>
+#include <list>
 using namespace std;
 
 int yyerror(const char*);
 extern int yylex();
-
-int nrBegunConditionals = 0;
-//extern int columnCount;
 extern int poz[];
+
+map<string, int> symbolTable;	// 0-int, 1-real, 2-string
+list<map<string, int>> listOfMaps;
+
+void declare(char* varName, int varType);
+void verifyVariable(char* varName);
+void verifyType(int t1, int t2);
+void verifyType(char* t1, int t2);
+int getType(char* varName);
+
 %}
 %error-verbose
 
 %union {
-  int num_integer;
-  double num_real;
-  char* text_string;
+  char* varName;
+	int varType;
 }
 
 
@@ -31,10 +41,6 @@ extern int poz[];
 %token<text_string> STRING
 %token NEWLINE
 
-%type<num_integer> expression_integer
-%type<num_real> expression_real
-%type<text_string> expression_string
-
 %token TYPE_REAL TYPE_INTEGER TYPE_STRING VARIABLE
 %token GIVEN THEN OTHERWISE
 %token WHILE DO
@@ -46,6 +52,7 @@ extern int poz[];
 %token PRINT READ
 
 %token ENDCOND ENDWHILE
+
 
 %%
 
@@ -60,49 +67,51 @@ program :
         | program input
 ;
 
-declaration: TYPE_INTEGER assignment
-           | TYPE_REAL assignment
-           | TYPE_STRING assignment
-           | TYPE_INTEGER VARIABLE
-           | TYPE_REAL VARIABLE
-           | TYPE_STRING VARIABLE
+declaration: TYPE_INTEGER VARIABLE '=' expression { declare($<varName>2, 0); verifyType(listOfMaps.back()[$<varName>2], $<varType>4);}
+           | TYPE_REAL VARIABLE '=' expression { declare($<varName>2, 1); verifyType(listOfMaps.back()[$<varName>2], $<varType>4); }
+           | TYPE_STRING VARIABLE '=' expression { declare($<varName>2, 2); verifyType(listOfMaps.back()[$<varName>2], $<varType>4); }
+           | TYPE_INTEGER VARIABLE { declare($<varName>2, 0); }
+           | TYPE_REAL VARIABLE { declare($<varName>2, 1); }
+           | TYPE_STRING VARIABLE { declare($<varName>2, 2); }
 ;
 
 input: READ VARIABLE
 ;
 
-expression: expression_integer
-          | expression_real
-          | expression_string
-          | VARIABLE
+expression: INTEGER { $<varType>$ = 0; }
+          | REAL { $<varType>$ = 1; }
+          | STRING { $<varType>$ = 2; }
+          | VARIABLE { verifyVariable($<varName>1); $<varType>$ = listOfMaps.back()[$<varName>1]; }
           | '(' expression ')'
           | '(' expression error ')' { yyerrok; }
-          | expression '+' expression {}
-          | expression '-' expression {}
-          | expression '*' expression {}
-          | expression '/' expression {}
+          | expression '+' expression { verifyType($<varType>1, $<varType>3); }
+          | expression '-' expression { verifyType($<varType>1, $<varType>3); }
+          | expression '*' expression { verifyType($<varType>1, $<varType>3); }
+          | expression '/' expression { verifyType($<varType>1, $<varType>3); }
           | condition {}
-          | VARIABLE '[' expression ']'
-          | VARIABLE '[' expression error ']' { yyerrok; }
+          | VARIABLE '[' expression ']' { verifyVariable($<varName>1); }
+          | VARIABLE '[' expression error ']' { verifyVariable($<varName>1); yyerrok; }
 ;
 
-expression_integer: INTEGER { /*$$ = $1; cout << $1 << endl;*/ };
-expression_real: REAL { /*$$ = $1; cout << $1 << endl;*/ };
-expression_string: STRING { /*$$ = $1; cout << $1 << endl;*/ };
 
-assignment: VARIABLE '=' expression
+assignment: VARIABLE '=' expression { verifyType($<varName>1, $<varType>3);/*verifyType(listOfMaps.back()[$<varName>1], $<varType>3);*/ /*cout << $<varName>1 << " " << listOfMaps.back()[$<varName>1] << " with " << $<varType>3 << endl;*/ }
           | VARIABLE '=' error expression { yyerrok; }
 ;
 
 
-conditional: GIVEN longer_condition THEN program ENDCOND {}
-          
-           | GIVEN longer_condition THEN program OTHERWISE program ENDCOND {}
-          
+conditional: startcond longer_condition THEN program endcond {}
+           | startcond longer_condition THEN program OTHERWISE program endcond {}
+;
+startcond: GIVEN { listOfMaps.push_back(*(new map<string, int>)); }
+;
+endcond: ENDCOND { /*delete &(listOfMaps.back());*/ listOfMaps.pop_back(); }
 ;
 
-while: WHILE longer_condition DO program ENDWHILE
-     
+while: startwhile longer_condition DO program endwhile
+;
+startwhile: WHILE { listOfMaps.push_back(*(new map<string, int>)); }
+;
+endwhile: ENDWHILE { /*delete &(listOfMaps.back());*/ listOfMaps.pop_back(); }
 ;
 
 condition: expression EQUALS_VALUE expression
@@ -138,11 +147,54 @@ longer_expression: expression
 %%
 
 int main() {
+  listOfMaps.push_back(symbolTable);
   yyparse();
 }
 
 int yyerror(const char* s) {
-	//cout << "(" << yylineno << ", " << columnCount << ") " << s << endl;
-  cout << "(" << poz[0] << ", " << poz[1]-poz[2] << "): ";
+	cout << "(" << poz[0] << ", " << poz[1]-poz[2] << "): ";
 	cout << s << endl;
+}
+
+void declare(char* varName, int varType){
+	if (listOfMaps.back().find(varName) != listOfMaps.back().end()) {
+		char* errorMsg = strcat(varName," already declared!\n");
+		yyerror(errorMsg);
+	}
+	else {
+		listOfMaps.back()[varName] = varType;
+		//program += (varType==0?"int ":"double ") + varName + ";\n";
+	}
+}
+
+void verifyVariable(char* varName) {
+	for (list<map<string, int>>::reverse_iterator it = listOfMaps.rbegin(); it != listOfMaps.rend(); ++it) {
+    if (it->find(varName) != it->end()) {
+      return;
+    }
+  }
+  char* errorMsg = strcat(varName," not declared!\n");
+  yyerror(errorMsg);
+}
+
+void verifyType(int t1, int t2) {
+	if (t1 != t2) {
+		char errorMsg[] = "Types don't match!";
+		yyerror(errorMsg);
+	}
+}
+
+void verifyType(char* varName, int t2) {
+	verifyType(getType(varName), t2);
+}
+
+int getType(char* varName) {
+  for (list<map<string, int>>::reverse_iterator it = listOfMaps.rbegin(); it != listOfMaps.rend(); ++it) {
+    if (it->find(varName) != it->end()) {
+      return it->find(varName)->second;
+    }
+  }
+  // char* errorMsg = strcat(varName," not declared!\n");
+  // yyerror(errorMsg);
+  return -1;
 }
