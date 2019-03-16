@@ -1,7 +1,7 @@
 import time
 import copy
 import sys
-sys.stdout = open("/home/baam0146/egyetem/mestint/sudoku/output.txt", "w")
+# sys.stdout = open("/home/baam0146/egyetem/mestint/sudoku/output.txt", "w")
 
 positions = [(r,c) for r in range(9) for c in range(9)]
 
@@ -85,28 +85,46 @@ def testResult(values):
 	return True
 
 
-if __name__ == "__main__":
-	# inputFile = open("top95.txt", "r")
-	inputFile = open("easy50.txt", "r")
+def solveSudoku(text):
 	peers = getPeers()
+	values = dict(((r,c), [1, 2, 3, 4, 5 , 6, 7, 8, 9]) for r in range(9) for c in range(9))
+	for row in range(9):
+			for col in range(9):
+				char = text[9 * row + col]
+				if text[9 * row + col] in "123456789":
+					assign(values, peers, (row, col), int(char))
+	if not all([len(values[p]) == 1 for p in positions]):
+		x = solve(values, peers, nextPos(values))
+	else:
+		x = values
 
-	totalTime = time.perf_counter()
-	for line in inputFile:
-		individualTime = time.perf_counter()
-		values = dict(((r,c), [1, 2, 3, 4, 5 , 6, 7, 8, 9]) for r in range(9) for c in range(9))
-		for row in range(9):
-				for col in range(9):
-					char = line[9 * row + col]
-					if line[9 * row + col] in "123456789":
-						assign(values, peers, (row, col), int(char))
+	return x
 
-		if not all([len(values[p]) == 1 for p in positions]):
-			x = solve(values, peers, nextPos(values))
-		else:
-			x = values
-		print(testResult(x))
-		prettyPrint(x)
-		print("Time elapsed: ", (time.perf_counter() - individualTime))
-		print("\n")
+
+# if __name__ == "__main__":
+# 	# inputFile = open("top95.txt", "r")
+# 	inputFile = open("easy50.txt", "r")
+# 	peers = getPeers()
+
+# 	totalTime = time.perf_counter()
+# 	for line in inputFile:
+# 		individualTime = time.perf_counter()
+# 		values = dict(((r,c), [1, 2, 3, 4, 5 , 6, 7, 8, 9]) for r in range(9) for c in range(9))
+# 		for row in range(9):
+# 				for col in range(9):
+# 					char = line[9 * row + col]
+# 					if line[9 * row + col] in "123456789":
+# 						assign(values, peers, (row, col), int(char))
+
+# 		if not all([len(values[p]) == 1 for p in positions]):
+# 			x = solve(values, peers, nextPos(values))
+# 		else:
+# 			x = values
+# 		print(testResult(x))
+# 		prettyPrint(x)
+# 		print("Time elapsed: ", (time.perf_counter() - individualTime))
+# 		print("\n")
 	
-	print("Total time elapsed: ", (time.perf_counter() - totalTime))
+# 	print("Total time elapsed: ", (time.perf_counter() - totalTime))
+
+
