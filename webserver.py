@@ -2,11 +2,14 @@ import socket
 import json
 import time
 # import _thread as thread
-from minimax1 import givenPlayerWon, minimax, setJK
+from minimax1 import givenPlayerWon, minimax, setJK as setJKm1
+from minimaxAlfaBeta import getBestMove as alfaBeta, setJK as setJKab
 
 J = 0
 K = 0
 L = 0
+nextMove = None
+setJK = None
 
 # def askFirstPlayer(connection, loser):
 # 	global K, J
@@ -74,14 +77,21 @@ L = 0
 
 
 def handlePvC(s):
-	global J, K, L
+	global J, K, L, nextMove
 	resp = json.loads(s.recv(1024).decode('ascii')) # size
 	K = resp['p1']
 	L = resp['p2']
+
+
 	resp = json.loads(s.recv(1024).decode('ascii')) # length
 	J = resp['p1']
-
-	setJK(J, K)
+	
+	if K == 3 and L == 3:
+		nextMove = minimax
+	else:
+		nextMove = alfaBeta
+	setJKm1(J, K)
+	setJKab(J, K)
 	
 	game = [['-'] * L for _ in range(K)]
 
@@ -98,7 +108,7 @@ def handlePvC(s):
 		else:
 			s.send('{"cmd" : "continue", "p1": 0, "p2": 0}'.encode('ascii'))
 		
-		(v, i, j) = minimax(game, False)
+		(v, i, j) = nextMove(game, False)
 		if (i, j) == (-1, -1):
 			s.send('{"cmd" : "end", "p1": "DRAW", "p2": 0}'.encode('ascii'))
 			break
@@ -119,13 +129,22 @@ def handleCvC(s):
 	resp = json.loads(s.recv(1024).decode('ascii')) # size
 	K = resp['p1']
 	L = resp['p2']
+	
 	resp = json.loads(s.recv(1024).decode('ascii')) # length
 	J = resp['p1']
-	setJK(J, K)
+	# setJK(J, K)
+
+	if K == 3 and L == 3:
+		nextMove = minimax
+	else:
+		nextMove = alfaBeta
+	setJKm1(J, K)
+	setJKab(J, K)
+
 	game = [['-'] * L for _ in range(K)]
 
 	while True:
-		(v, i, j) = minimax(game, True)
+		(v, i, j) = nextMove(game, True)
 		if (i, j) == (-1, -1):
 			s.send('{"cmd" : "end", "p1": "DRAW", "p2": 0}'.encode('ascii'))
 			time.sleep(0.5)
@@ -135,7 +154,7 @@ def handleCvC(s):
 			s.send(('{"cmd" : "move", "p1":' + str(i) + ', "p2": ' + str(j) + '}').encode('ascii'))
 			time.sleep(0.5)
 		
-		(v, i, j) = minimax(game, False)
+		(v, i, j) = nextMove(game, False)
 		if (i, j) == (-1, -1):
 			s.send('{"cmd" : "end", "p1": "DRAW", "p2": 0}'.encode('ascii'))
 			time.sleep(0.5)
@@ -170,7 +189,10 @@ def handlePvP(s1, s2):
 	if resp1['p1'] < resp2['p1']:
 		s1, s2 = s2, s1
 	getGameDetails(s1, s2)
-	setJK(J, K)
+	
+	setJKm1(J, K)
+	setJKab(J, K)
+	
 	game = [['-'] * L for _ in range(K)]
 
 	while True:

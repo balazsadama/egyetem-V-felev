@@ -3,6 +3,7 @@ import random
 import json
 import _thread as thread
 import tkinter as tk
+import time
 root = tk.Tk()
 
 HEIGHT = 600
@@ -114,16 +115,20 @@ def waitOpponentMove():
 	if not(type(resp) is dict):
 		resp = json.loads(resp) # otherwise it stays as string
 
-	i = resp['p1']
-	j = resp['p2']
-	buttons[i][j]['text'] = 'O'
-
-	resp = s.recv(1024).decode('ascii')
-	if not(type(resp) is dict):
-		resp = json.loads(resp) # otherwise it stays as string
 	if resp['cmd'] == 'end':
 		print(resp['p1'])
 		gameOver(resp['p1'], s)
+	else:
+		i = resp['p1']
+		j = resp['p2']
+		buttons[i][j]['text'] = 'O'
+
+		resp = s.recv(1024).decode('ascii')
+		if not(type(resp) is dict):
+			resp = json.loads(resp) # otherwise it stays as string
+		if resp['cmd'] == 'end':
+			print(resp['p1'])
+			gameOver(resp['p1'], s)
 	
 	waitForOpponentLabel.pack_forget()
 
@@ -145,6 +150,7 @@ def submitDimensions():
 	msg = '{"cmd" : "size", "p1" : ' + str(K) + ', "p2" : ' + str(L) + '}'
 	s.send(msg.encode('ascii'))
 	msg = '{"cmd" : "length", "p1" : ' + str(J) + ', "p2" : 0}'
+	time.sleep(0.5)
 	s.send(msg.encode('ascii'))
 
 	for i in range(K):
